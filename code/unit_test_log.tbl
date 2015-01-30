@@ -1,0 +1,10 @@
+create table UNIT_TEST_LOG
+(
+  id_run      NUMBER,
+  nm_package  VARCHAR2(50),
+  nm_test     VARCHAR2(50),
+  pr_success  NUMBER(1),
+  nm_msg      VARCHAR2(4000),
+  dt_run      DATE,
+  nm_addition VARCHAR2(4000)
+);
