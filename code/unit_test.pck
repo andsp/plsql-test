@@ -1,5 +1,9 @@
 create or replace package unit_test is
 
+  assert_exception exception;
+  
+  pragma exception_init(assert_exception,-20901);
+
   /**
   * cтруктура теста
   */
@@ -13,12 +17,16 @@ create or replace package unit_test is
   */
   type t_test_tbl is table of t_test_info;
   /**
-  * запуск тестов
+  * запуск на выполнение тестов
   * @param  p_pack_nm  наименование пакета для поиска
   * @param  p_test_nm  наименование процедуры теста внутри пакеета для поиска
+  * @param  p_ignore_success параметр логирования успешных проверок, 
+  *         по умолчанию успешные проверки не логируются
   * если параметры не указаны то будут выполняться все тесты
   */
-  procedure run_test(p_pack_nm varchar2, p_test_nm varchar2);
+  procedure run_test(p_pack_nm varchar2, 
+                     p_test_nm varchar2,
+                     p_ignore_success boolean := true);
 
   procedure fail(p_message in varchar2 default '');
   procedure assert_true(p_condition in boolean,
@@ -97,6 +105,10 @@ create or replace package body unit_test is
   * текущий тест
   */
   g_test t_test_info;
+  /**
+  * логирование успешных проверок
+  */
+  g_ignore_success boolean;
 
   /**
   * запись результата в лог
@@ -107,23 +119,30 @@ create or replace package body unit_test is
   procedure log(p_result number, p_message varchar2, p_addition varchar2) is
     pragma autonomous_transaction;
   begin
-    insert into unit_test_log
-      (id_run,
-       nm_package,
-       nm_test,
-       pr_success,
-       nm_msg,
-       dt_run,
-       nm_addition)
-    values
-      (g_id_run,
-       g_test.nm_pack,
-       g_test.nm_test,
-       p_result,
-       substr(p_message, 1, 4000),
-       g_dt_run,
-       substr(p_addition, 1, 4000));
-    commit;
+    -- если вызов из вне, то просто вызываем исключение
+    if g_test.nm_pack is null and p_result = RESULT_FAIL then
+      raise_application_error(-20901,p_message||chr(13)||p_addition);
+    end if;
+    -- если игнорируем успешные проверки то логируем только сбои
+    if not (g_ignore_success and p_result = result_success) then
+      insert into unit_test_log
+        (id_run,
+         nm_package,
+         nm_test,
+         pr_success,
+         nm_msg,
+         dt_run,
+         nm_addition)
+      values
+        (g_id_run,
+         g_test.nm_pack,
+         g_test.nm_test,
+         p_result,
+         substr(p_message, 1, 4000),
+         g_dt_run,
+         substr(p_addition, 1, 4000));
+      commit;
+    end if;
   end;
 
   function bool_to_str(p_val boolean) return varchar2 is
@@ -194,18 +213,23 @@ create or replace package body unit_test is
     return v_result_test;
   end get_test_info;
   /**
-  * запуск на выполнение массива тестов
+  * запуск на выполнение тестов
   * @param  p_pack_nm  наименование пакета для поиска
   * @param  p_test_nm  наименование процедуры теста внутри пакеета для поиска
+  * @param  p_ignore_success параметр логирования успешных проверок, 
+  *         по умолчанию успешные проверки не логируются
   * если параметры не указаны то будут выполняться все тесты
   */
-  procedure run_test(p_pack_nm varchar2, p_test_nm varchar2) is
+  procedure run_test(p_pack_nm        varchar2,
+                     p_test_nm        varchar2,
+                     p_ignore_success boolean := true) is
     v_test_arr t_test_tbl := get_test_info(p_pack_nm, p_test_nm);
     v_index    pls_integer;
   begin
-    g_id_run := SEQ_UNIT_TEST.Nextval;
-    g_dt_run := sysdate;
-    v_index  := v_test_arr.first;
+    g_id_run         := seq_unit_test.nextval;
+    g_dt_run         := sysdate;
+    g_ignore_success := p_ignore_success;
+    v_index          := v_test_arr.first;
     while v_index is not null loop
       g_test := v_test_arr(v_index);
       begin
@@ -226,6 +250,7 @@ create or replace package body unit_test is
       v_index := v_test_arr.next(v_index);
     end loop;
     g_id_run := null;
+    g_test   := null;
   end run_test;
 
   procedure fail(p_message in varchar2 default '') is
