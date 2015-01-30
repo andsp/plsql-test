@@ -192,10 +192,10 @@ create or replace package body unit_test is
                  from user_procedures t
                  left join user_procedures s
                    on s.object_name = t.object_name
-                  and s.PROCEDURE_NAME = 'SETUP_' || t.PROCEDURE_NAME
+                  and s.PROCEDURE_NAME = 'SETUP_' || substr(t.PROCEDURE_NAME,3)
                  left join user_procedures D
                    on D.object_name = t.object_name
-                  and d.PROCEDURE_NAME = 'DOWN_' || t.PROCEDURE_NAME
+                  and d.PROCEDURE_NAME = 'DOWN_' || substr(t.PROCEDURE_NAME,3)
                 where t.object_type = 'PACKAGE'
                   and substr(t.object_name, 1, 2) = 'T_'
                   and substr(t.PROCEDURE_NAME, 1, 2) = 'T_'
@@ -235,14 +235,21 @@ create or replace package body unit_test is
       begin
         if g_test.pr_setup then
           execute immediate 'begin ' || g_test.nm_pack || '.SETUP_' ||
-                            g_test.nm_test || '; end;';
+                            substr(g_test.nm_test, 3) || '; end;';
         end if;
-        execute immediate 'begin ' || g_test.nm_pack || '.' ||
-                          g_test.nm_test || '; end;';
+        begin
+          execute immediate 'begin ' || g_test.nm_pack || '.' ||
+                            g_test.nm_test || '; end;';
+        exception
+          when others then
+            -- если тест упал, down  все равно должен выполниться 
+            fail(sqlerrm);
+        end;
         if g_test.pr_down then
           execute immediate 'begin ' || g_test.nm_pack || '.DOWN_' ||
-                            g_test.nm_test || '; end;';
+                            substr(g_test.nm_test, 3) || '; end;';
         end if;
+      
       exception
         when others then
           fail(sqlerrm);
