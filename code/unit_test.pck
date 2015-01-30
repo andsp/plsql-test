@@ -1,7 +1,7 @@
-п»їcreate or replace package unit_test is
+create or replace package unit_test is
 
   /**
-  * вЂ”С‚СЂСѓРєС‚СѓСЂР° С‚РµСЃС‚Р°
+  * cтруктура теста
   */
   type t_test_info is record(
     nm_pack  varchar2(50),
@@ -9,14 +9,14 @@
     pr_setup boolean,
     pr_down  boolean);
   /**
-  * С›Р°СЃСЃРёРІ С‚РµСЃС‚РѕРІ
+  * массив тестов
   */
   type t_test_tbl is table of t_test_info;
   /**
-  * В«Р°РїСѓСЃРє С‚РµСЃС‚РѕРІ
-  * @param  p_pack_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїР°РєРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * @param  p_test_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРѕС†РµРґСѓСЂС‹ С‚РµСЃС‚Р° РІРЅСѓС‚СЂРё РїР°РєРµРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * РµСЃР»Рё РїР°СЂР°РјРµС‚СЂС‹ РЅРµ СѓРєР°Р·Р°РЅС‹ С‚Рѕ Р±СѓРґСѓС‚ РІС‹РїРѕР»РЅВ¤С‚СЊСЃВ¤ РІСЃРµ С‚РµСЃС‚С‹
+  * запуск тестов
+  * @param  p_pack_nm  наименование пакета для поиска
+  * @param  p_test_nm  наименование процедуры теста внутри пакеета для поиска
+  * если параметры не указаны то будут выполняться все тесты
   */
   procedure run_test(p_pack_nm varchar2, p_test_nm varchar2);
 
@@ -81,28 +81,28 @@ create or replace package body unit_test is
 
   RESULT_FAIL constant number := 0;
 
-  LABEL_EXPECT constant varchar2(50) := 'РѕР¶РёРґР°Р»Рё';
+  LABEL_EXPECT constant varchar2(50) := 'ожидали';
 
-  LABEL_RETURN constant varchar2(50) := 'РїРѕР»СѓС‡РёР»Рё';
+  LABEL_RETURN constant varchar2(50) := 'получили';
 
   /**
-  * В»РґРµРЅС‚РёС„РёРєР°С‚РѕСЂ Р·Р°РїСѓСЃРєР°
+  * идентификатор запуска
   */
   g_id_run number;
   /**
-  * В¬СЂРµРјВ¤ СЃС‚Р°СЂС‚Р° Р·Р°РїСѓСЃРєР°
+  * время старта запуска
   */
   g_dt_run date;
   /**
-  * вЂњРµРєСѓС‰РёР№ С‚РµСЃС‚
+  * текущий тест
   */
   g_test t_test_info;
 
   /**
-  * В«Р°РїРёСЃСЊ СЂРµР·СѓР»СЊС‚Р°С‚Р° РІ Р»РѕРі
-  * @param p_result  РєРѕРґ СЂРµР·СѓР»СЊС‚Р°С‚Р°
-  * @param p_message СЃРѕРѕР±С‰РµРЅРёРµ С‚РµСЃС‚Р°
-  * @param p_addition РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅР°В¤ РёРЅС„РѕСЂРјР°С†РёВ¤
+  * запись результата в лог
+  * @param p_result  код результата
+  * @param p_message сообщение теста
+  * @param p_addition дополнительная информация
   */
   procedure log(p_result number, p_message varchar2, p_addition varchar2) is
     pragma autonomous_transaction;
@@ -156,10 +156,10 @@ create or replace package body unit_test is
   end;
 
   /**
-  * С•РѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє С‚РµСЃС‚РѕРІ РЅР° СЃС…РµРјРµ
-  * @param  p_pack_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїР°РєРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * @param  p_test_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРѕС†РµРґСѓСЂС‹ С‚РµСЃС‚Р° РІРЅСѓС‚СЂРё РїР°РєРµРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * @return  РјР°СЃСЃРёРІ С‚РµСЃС‚РѕРІ РѕРіСЂР°РЅРёС‡РµРЅРЅС‹С… РїР°СЂР°РјРµС‚СЂР°РјРё, РµСЃР»Рё РїРµСЂРµРґР°С‚СЊ РІСЃРµ РїР°СЂР°РјРµС‚СЂС‹ РїСѓСЃС‚РёРјС‹ С‚Рѕ РІРµСЂРЅРµС‚ РїРѕР»РЅС‹Р№ СЃРїРёСЃРѕРє С‚РµСЃС‚РѕРІ СЃРѕ СЃС…РµРјС‹
+  * получить список тестов на схеме
+  * @param  p_pack_nm  наименование пакета для поиска
+  * @param  p_test_nm  наименование процедуры теста внутри пакеета для поиска
+  * @return  массив тестов ограниченных параметрами, если передать все параметры пустимы то вернет полный список тестов со схемы
   */
   function get_test_info(p_pack_nm varchar2, p_test_nm varchar2)
     return t_test_tbl is
@@ -194,10 +194,10 @@ create or replace package body unit_test is
     return v_result_test;
   end get_test_info;
   /**
-  * В«Р°РїСѓСЃРє РЅР° РІС‹РїРѕР»РЅРµРЅРёРµ РјР°СЃСЃРёРІР° С‚РµСЃС‚РѕРІ
-  * @param  p_pack_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїР°РєРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * @param  p_test_nm  РЅР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРѕС†РµРґСѓСЂС‹ С‚РµСЃС‚Р° РІРЅСѓС‚СЂРё РїР°РєРµРµС‚Р° РґР»В¤ РїРѕРёСЃРєР°
-  * РµСЃР»Рё РїР°СЂР°РјРµС‚СЂС‹ РЅРµ СѓРєР°Р·Р°РЅС‹ С‚Рѕ Р±СѓРґСѓС‚ РІС‹РїРѕР»РЅВ¤С‚СЊСЃВ¤ РІСЃРµ С‚РµСЃС‚С‹
+  * запуск на выполнение массива тестов
+  * @param  p_pack_nm  наименование пакета для поиска
+  * @param  p_test_nm  наименование процедуры теста внутри пакеета для поиска
+  * если параметры не указаны то будут выполняться все тесты
   */
   procedure run_test(p_pack_nm varchar2, p_test_nm varchar2) is
     v_test_arr t_test_tbl := get_test_info(p_pack_nm, p_test_nm);
@@ -424,7 +424,7 @@ create or replace package body unit_test is
           p_message,
           LABEL_EXPECT || ' NULL ' || LABEL_RETURN || ' ' ||
           date_to_str(p_actual));
-    
+
     end if;
   end;
 
