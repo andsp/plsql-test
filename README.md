@@ -3,5 +3,7 @@
 
 [Установка](doc/install.md) 
 
+[Описание](doc/desc.md)
+
 
 
