@@ -30,6 +30,11 @@ CREATE OR REPLACE PACKAGE "UNIT_TEST" is
                      p_test_nm varchar2,
                      p_ignore_success boolean := true,
                      p_store_log      boolean := false);
+                     
+  /**
+  * Получаем идентификатор последнего запуска тестов в рамках данной сессии
+  */                   
+  function get_last_run_id return number;                   
 
   procedure fail(p_message in varchar2 default '');
   procedure assert_true(p_condition in boolean,
@@ -209,10 +214,10 @@ CREATE OR REPLACE PACKAGE BODY "UNIT_TEST" is
                  from user_procedures t
                  left join user_procedures s
                    on s.object_name = t.object_name
-                  and s.PROCEDURE_NAME = 'SETUP_' || substr(t.PROCEDURE_NAME,3)
+                  and s.PROCEDURE_NAME = 'S_' || substr(t.PROCEDURE_NAME,3)
                  left join user_procedures D
                    on D.object_name = t.object_name
-                  and d.PROCEDURE_NAME = 'DOWN_' || substr(t.PROCEDURE_NAME,3)
+                  and d.PROCEDURE_NAME = 'D_' || substr(t.PROCEDURE_NAME,3)
                 where t.object_type = 'PACKAGE'
                   and substr(t.object_name, 1, 2) = 'T_'
                   and substr(t.PROCEDURE_NAME, 1, 2) = 'T_'
@@ -255,7 +260,7 @@ CREATE OR REPLACE PACKAGE BODY "UNIT_TEST" is
       g_test := v_test_arr(v_index);
       begin
         if g_test.pr_setup then
-          execute immediate 'begin ' || g_test.nm_pack || '.SETUP_' ||
+          execute immediate 'begin ' || g_test.nm_pack || '.S_' ||
                             substr(g_test.nm_test, 3) || '; end;';
         end if;
         begin
@@ -267,7 +272,7 @@ CREATE OR REPLACE PACKAGE BODY "UNIT_TEST" is
             fail(sqlerrm);
         end;
         if g_test.pr_down then
-          execute immediate 'begin ' || g_test.nm_pack || '.DOWN_' ||
+          execute immediate 'begin ' || g_test.nm_pack || '.D_' ||
                             substr(g_test.nm_test, 3) || '; end;';
         end if;
       
@@ -277,9 +282,17 @@ CREATE OR REPLACE PACKAGE BODY "UNIT_TEST" is
       end;
       v_index := v_test_arr.next(v_index);
     end loop;
-    g_id_run := null;
     g_test   := null;
   end run_test;
+  
+  
+  /**
+  * Получаем идентификатор последнего запуска тестов в рамках данной сессии
+  */                   
+  function get_last_run_id return number is
+  begin
+    return g_id_run;
+  end get_last_run_id;
 
   procedure fail(p_message in varchar2 default '') is
   begin
