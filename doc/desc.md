@@ -12,6 +12,6 @@ create or replace package t_finance_calc is
 ## Setup и Teardown
 Для каждого теста можно определить эти процесса. Это также процедуры без параметров с именем имеющим следующую структуру:
 ```plsql
- procedure setup_[имя теста после "t_"];
- procedure down_[имя теста после "t_"];
+ procedure s_[имя теста после "t_"];
+ procedure d_[имя теста после "t_"];
 ``` 
